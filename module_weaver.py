@@ -319,6 +319,7 @@ def run():
                             st.write(f"**{p_name}:** {res}")
                             time.sleep(3)
                 st.success("Done!")
+                luu_lich_su_vinh_vien("Tranh Biện Solo", f"Vs {p_sel}: {q}", res.text)
 
     # === TAB 4: PHÒNG THU AI ===
     with tab4:
