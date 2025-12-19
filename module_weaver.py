@@ -319,7 +319,9 @@ def run():
                             st.write(f"**{p_name}:** {res}")
                             time.sleep(3)
                 st.success("Done!")
-                luu_lich_su_vinh_vien("Tranh Biện Solo", f"Vs {p_sel}: {q}", res.text)
+                full_log = "\n\n".join(st.session_state.battle_logs)
+                luu_lich_su_vinh_vien("Hội Đồng Tranh Biện", topic, full_log)
+                st.toast("💾 Đã lưu biên bản cuộc họp vào Nhật Ký!", icon="✅")
 
     # === TAB 4: PHÒNG THU AI ===
     with tab4:
