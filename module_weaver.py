@@ -275,7 +275,7 @@ def run():
                 st.markdown(res)
                 luu_lich_su("Dịch Thuật", f"{target_lang}", txt[:50])
 
-    # === TAB 3: TRANH BIỆN ===
+    # === TAB 3: ĐẤU TRƯỜNG TƯ DUY (MULTI-AGENT ARENA) ===
     with tab3:
         st.subheader(T("t3_header"))
         mode = st.radio("Mode:", ["👤 Solo", "⚔️ Multi-Agent"], horizontal=True, key="w_t3_mode")
