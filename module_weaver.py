@@ -366,7 +366,7 @@ def run():
                             with st.chat_message("assistant"): 
                                 st.write(content_fmt)
                             
-                            time.sleep(5) # Nghỉ để tránh Quota
+                            time.sleep(10) # Nghỉ để tránh Quota
                 
                 # --- ĐÃ BỔ SUNG: LƯU LỊCH SỬ ---
                 luu_lich_su("Hội Đồng Tranh Biện", topic, "\n\n".join(full_transcript))
