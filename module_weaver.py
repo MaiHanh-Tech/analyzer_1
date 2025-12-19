@@ -419,7 +419,8 @@ def run():
                         x="Time", 
                         y="score", 
                         markers=True, 
-                        color="sentiment_label",
+                        color_discrete_sequence=["#76FF03"], # <--- Mã màu Xanh Nõn Chuối (Neon)
+                        # Nếu thích Xanh Dương thì thay bằng: ["#1E90FF"]
                         labels={"score": "Chỉ số Tích cực (Positivity)", "Time": "Thời gian"}
                     )
                     fig.update_layout(height=250, margin=dict(l=20, r=20, t=10, b=20))
