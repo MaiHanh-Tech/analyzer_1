@@ -2,7 +2,6 @@ import streamlit as st
 import json
 import re
 
-# 1. CẤU HÌNH TRANG (BẮT BUỘC PHẢI Ở DÒNG ĐẦU TIÊN)
 st.set_page_config(page_title="Super AI System", layout="wide", page_icon="🏢")
 
 # 2. KHỐI BẢO MẬT (Import Auth Block)
@@ -64,4 +63,4 @@ try:
         
 except ImportError as e:
     st.error(f"⚠️ Lỗi: Không tìm thấy file module tương ứng!\nChi tiết: {e}")
-    st.info
+    st.info("👉 Hãy đảm bảo chị đã đổi tên các file cũ thành: module_cfo.py, module_translator.py, module_weaver.py")
