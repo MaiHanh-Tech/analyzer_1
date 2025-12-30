@@ -23,19 +23,18 @@ if not st.session_state.user_logged_in:
     c1, c2, c3 = st.columns([1, 2, 1])
     
     with c2:
-        # Code này sẽ lấy input chị nhập -> Mã hóa -> So sánh với file secrets.toml
-        pwd = st.text_input("Mật khẩu quản trị:", type="password")
+        pwd = st.text_input("Nhập mật khẩu quản trị:", type="password")
         
         if st.button("Đăng Nhập", use_container_width=True):
-            # Hàm auth.login tự động check Hash, không check 123456
+            # Hàm này sẽ check Hash trong secrets.toml
             if auth.login(pwd): 
                 st.success("Đang vào hệ thống...")
                 st.rerun()
             else:
-                st.error("Sai mật khẩu!")
+                st.error("Sai mật khẩu hoặc tài khoản bị khóa!")
     st.stop() 
 
-# 4. GIAO DIỆN CHÍNH (CHỈ HIỆN KHI ĐÚNG MẬT KHẨU CỦA CHỊ)
+# 4. GIAO DIỆN CHÍNH (CHỈ HIỆN KHI ĐÚNG MẬT KHẨU)
 with st.sidebar:
     st.title("🗂️ DANH MỤC ỨNG DỤNG")
     st.info(f"👤 User: **{st.session_state.current_user}**")
