@@ -2,10 +2,10 @@ import streamlit as st
 import json
 import re
 
-# 1. CẤU HÌNH TRANG (BẮT BUỘC PHẢI Ở DÒNG ĐẦU TIÊN)
+# 1. CẤU HÌNH TRANG (DÒNG ĐẦU TIÊN)
 st.set_page_config(page_title="Super AI System", layout="wide", page_icon="🏢")
 
-# 2. KHỐI BẢO MẬT (Import Auth Block)
+# 2. KHỐI BẢO MẬT
 try:
     from auth_block import AuthBlock
     auth = AuthBlock()
@@ -19,25 +19,28 @@ if 'user_logged_in' not in st.session_state:
 
 if not st.session_state.user_logged_in:
     st.title("🔐 Đăng Nhập Hệ Thống")
+    
     c1, c2, c3 = st.columns([1, 2, 1])
+    
     with c2:
-        # ĐÃ XÓA DÒNG GỢI Ý MẬT KHẨU TẠI ĐÂY
-        pwd = st.text_input("Nhập mật khẩu quản trị:", type="password")
-        if st.button("Truy cập", use_container_width=True):
+        # Code này sẽ lấy input chị nhập -> Mã hóa -> So sánh với file secrets.toml
+        pwd = st.text_input("Mật khẩu quản trị:", type="password")
+        
+        if st.button("Đăng Nhập", use_container_width=True):
+            # Hàm auth.login tự động check Hash, không check 123456
             if auth.login(pwd): 
-                st.success("Đăng nhập thành công!")
+                st.success("Đang vào hệ thống...")
                 st.rerun()
             else:
-                st.error("Sai mật khẩu hoặc tài khoản bị tạm khóa!")
+                st.error("Sai mật khẩu!")
     st.stop() 
 
-# 4. GIAO DIỆN CHÍNH (SAU KHI LOGIN)
+# 4. GIAO DIỆN CHÍNH (CHỈ HIỆN KHI ĐÚNG MẬT KHẨU CỦA CHỊ)
 with st.sidebar:
     st.title("🗂️ DANH MỤC ỨNG DỤNG")
-    st.info(f"👤 Xin chào: **{st.session_state.current_user}**")
+    st.info(f"👤 User: **{st.session_state.current_user}**")
     
-    # Menu chọn App
-    app_choice = st.radio("Chọn công việc:", [
+    app_choice = st.radio("Chọn Module:", [
         "💰 1. Cognitive Weaver (Sách & Graph)", 
         "🌏 2. AI Translator (Dịch thuật)",
         "🧠 3. CFO Controller (Tài chính)"
@@ -48,7 +51,7 @@ with st.sidebar:
         st.session_state.user_logged_in = False
         st.rerun()
 
-# 5. ĐIỀU HƯỚNG (GỌI CÁC FILE CON)
+# 5. ĐIỀU HƯỚNG
 try:
     if app_choice == "💰 1. Cognitive Weaver (Sách & Graph)":
         import module_weaver
@@ -63,5 +66,4 @@ try:
         module_cfo.run()
         
 except ImportError as e:
-    st.error(f"⚠️ Lỗi: Không tìm thấy file module tương ứng!\nChi tiết: {e}")
-    st.info("👉 Hãy đảm bảo chị đã đổi tên các file cũ thành: module_cfo.py, module_translator.py, module_weaver.py")
+    st.error(f"⚠️ Lỗi import module: {e}")
