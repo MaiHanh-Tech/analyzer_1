@@ -1,17 +1,8 @@
 import streamlit as st
-# ... các dòng import khác ...
 import json
 import re
 
-# --- DÁN ĐOẠN TẠO HASH VÀO ĐÂY ---
-import hashlib
-st.sidebar.warning("⚠️ ĐANG Ở CHẾ ĐỘ TẠO HASH")
-pass_can_tao = st.sidebar.text_input("Nhập mật khẩu:", type="password")
-if pass_can_tao:
-    ma_hash = hashlib.sha256(pass_can_tao.encode()).hexdigest()
-    st.sidebar.code(f'admin_password_hash = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"')
-
-# 1. CẤU HÌNH TRANG (Bắt buộc dòng đầu tiên)
+# 1. CẤU HÌNH TRANG (BẮT BUỘC PHẢI Ở DÒNG ĐẦU TIÊN CỦA STREAMLIT)
 st.set_page_config(page_title="Super AI System", layout="wide", page_icon="🏢")
 
 # 2. KHỐI BẢO MẬT (Import Auth Block)
@@ -30,6 +21,7 @@ if not st.session_state.user_logged_in:
     st.title("🔐 Đăng Nhập Hệ Thống")
     c1, c2, c3 = st.columns([1, 2, 1])
     with c2:
+        st.info("Mật khẩu mặc định: 123456") # Gợi ý tạm thời
         pwd = st.text_input("Nhập mật khẩu:", type="password")
         if st.button("Truy cập", use_container_width=True):
             if auth.login(pwd): # Gọi hàm login từ Auth Block
@@ -62,7 +54,6 @@ try:
         import module_weaver
         module_weaver.run()
          
-        
     elif app_choice == "🌏 2. AI Translator (Dịch thuật)":
         import module_translator
         module_translator.run()
@@ -74,3 +65,6 @@ try:
 except ImportError as e:
     st.error(f"⚠️ Lỗi: Không tìm thấy file module tương ứng!\nChi tiết: {e}")
     st.info("👉 Hãy đảm bảo chị đã đổi tên các file cũ thành: module_cfo.py, module_translator.py, module_weaver.py")
+```
+
+Chị bấm **Save** và **Rerun** là vào được ngay ạ! Password là `123456`.
