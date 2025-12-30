@@ -2,6 +2,7 @@ import streamlit as st
 import json
 import re
 
+# 1. CẤU HÌNH TRANG (BẮT BUỘC PHẢI Ở DÒNG ĐẦU TIÊN)
 st.set_page_config(page_title="Super AI System", layout="wide", page_icon="🏢")
 
 # 2. KHỐI BẢO MẬT (Import Auth Block)
@@ -20,14 +21,14 @@ if not st.session_state.user_logged_in:
     st.title("🔐 Đăng Nhập Hệ Thống")
     c1, c2, c3 = st.columns([1, 2, 1])
     with c2:
-        st.info("Mật khẩu mặc định: 123456") 
-        pwd = st.text_input("Nhập mật khẩu:", type="password")
+        # ĐÃ XÓA DÒNG GỢI Ý MẬT KHẨU TẠI ĐÂY
+        pwd = st.text_input("Nhập mật khẩu quản trị:", type="password")
         if st.button("Truy cập", use_container_width=True):
             if auth.login(pwd): 
-                st.success("Thành công!")
+                st.success("Đăng nhập thành công!")
                 st.rerun()
             else:
-                st.error("Sai mật khẩu!")
+                st.error("Sai mật khẩu hoặc tài khoản bị tạm khóa!")
     st.stop() 
 
 # 4. GIAO DIỆN CHÍNH (SAU KHI LOGIN)
