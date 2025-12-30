@@ -724,3 +724,59 @@ def run():
                     st.caption(f"Sentiment: {item.get('SentimentLabel', 'Neutral')} ({item.get('SentimentScore', 0)})")
         else:
             st.info(T("t5_empty"))
+
+# --- 👇 DÁN ĐOẠN NÀY VÀO CUỐI TAB 5 ĐỂ CHUYỂN DỮ LIỆU ---
+        st.divider()
+        with st.expander("🛠️ CÔNG CỤ CHUYỂN NHÀ (Google Sheet -> Supabase)", expanded=False):
+            st.info("Chức năng này giúp chị chuyển dữ liệu cũ sang nhà mới. Dùng xong có thể xóa code này đi.")
+            
+            uploaded_csv = st.file_uploader("1. Tải file CSV từ Google Sheet lên đây:", type=["csv"])
+            
+            if uploaded_csv:
+                df_old = pd.read_csv(uploaded_csv)
+                st.write(f"Đã tìm thấy {len(df_old)} dòng nhật ký cũ.")
+                st.dataframe(df_old.head(3))
+                
+                if st.button("🚀 BẮT ĐẦU CHUYỂN DỮ LIỆU"):
+                    progress_bar = st.progress(0)
+                    success_count = 0
+                    error_count = 0
+                    
+                    for idx, row in df_old.iterrows():
+                        # Map tên cột cũ (Google Sheet) sang cột mới (Supabase)
+                        try:
+                            # Xử lý thời gian: Google Sheet hay có format 30/12/2024... 
+                            # Cần chuyển về chuẩn ISO cho Database
+                            raw_time = str(row.get('Time', datetime.now()))
+                            try:
+                                # Thử convert ngày tháng (ưu tiên ngày/tháng/năm)
+                                clean_time = pd.to_datetime(raw_time, dayfirst=True).isoformat()
+                            except:
+                                clean_time = datetime.now().isoformat()
+
+                            data = {
+                                "created_at": clean_time,
+                                "type": str(row.get('Type', 'General')),
+                                "title": str(row.get('Title', 'No Title')),
+                                "content": str(row.get('Content', '')),
+                                "user_name": str(row.get('User', 'Imported')),
+                                "sentiment_score": float(row.get('SentimentScore', 0.0)),
+                                "sentiment_label": str(row.get('SentimentLabel', 'Neutral'))
+                            }
+                            
+                            # Gửi lên Supabase
+                            supabase.table("history_logs").insert(data).execute()
+                            success_count += 1
+                        except Exception as e:
+                            error_count += 1
+                            print(f"Lỗi dòng {idx}: {e}")
+                        
+                        # Cập nhật thanh tiến trình
+                        progress_bar.progress((idx + 1) / len(df_old))
+                    
+                    st.success(f"✅ Đã chuyển thành công: {success_count} dòng.")
+                    if error_count > 0:
+                        st.warning(f"⚠️ Có {error_count} dòng bị lỗi (có thể do định dạng ngày tháng).")
+                    
+                    time.sleep(1)
+                    st.rerun()
