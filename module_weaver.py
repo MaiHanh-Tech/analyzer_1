@@ -21,7 +21,7 @@ from voice_block import Voice_Engine
 from prompts import DEBATE_PERSONAS, BOOK_ANALYSIS_PROMPT
 
 # ==========================================
-# 🌍 BỘ TỪ ĐIỂN ĐA NGÔN NGỮ (TÍCH HỢP VÀO MODULE)
+# 🌍 BỘ TỪ ĐIỂN ĐA NGÔN NGỮ
 # ==========================================
 TRANS = {
     "vi": {
@@ -124,10 +124,30 @@ def T(key):
     lang = st.session_state.get('weaver_lang', 'vi')
     return TRANS.get(lang, TRANS['vi']).get(key, key)
 
-# --- CÁC HÀM PHỤ TRỢ ---
+# --- CÁC HÀM PHỤ TRỢ (ĐÃ SỬA THEO YÊU CẦU) ---
 @st.cache_resource
 def load_models():
-    return SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
+    """Chỉ load khi thực sự cần, và giới hạn 1 instance"""
+    try:
+        model = SentenceTransformer(
+            "paraphrase-multilingual-MiniLM-L12-v2",
+            device='cpu'  # ← BẮT BUỘC dùng CPU trên Streamlit Cloud
+        )
+        # Giảm kích thước cache
+        model.max_seq_length = 128  # Giảm từ 256 (default)
+        return model
+    except Exception as e:
+        st.error(f"Không load được model: {e}")
+        return None
+
+# THÊM HÀM KIỂM TRA
+def check_model_available():
+    """Kiểm tra model có sẵn không trước khi dùng"""
+    model = load_models()
+    if model is None:
+        st.warning("⚠️ Chức năng Knowledge Graph tạm thời không khả dụng (thiếu RAM)")
+        return False
+    return True
 
 def doc_file(uploaded_file):
     if not uploaded_file: return ""
@@ -281,7 +301,7 @@ def run():
                 st.markdown(res)
                 luu_lich_su("Dịch Thuật", f"{target_lang}", txt[:50])
 
-    # === TAB 3: ĐẤU TRƯỜNG TƯ DUY (ĐÃ SỬA INDENT) ===
+    # === TAB 3: ĐẤU TRƯỜNG TƯ DUY ===
     with tab3:
         st.subheader(T("t3_header"))
         mode = st.radio("Mode:", ["👤 Solo", "⚔️ Multi-Agent"], horizontal=True, key="w_t3_mode")
@@ -321,7 +341,7 @@ def run():
                     "content": prompt
                 })
                 
-                # ✅ FIX 1: XÂY DỰNG CONTEXT TỪ LỊCH SỬ
+                # XÂY DỰNG CONTEXT TỪ LỊCH SỬ
                 recent_history = st.session_state.weaver_chat[-10:]
                 
                 context_text = "\n".join([
@@ -358,7 +378,7 @@ def run():
                                 "content": res
                             })
                             
-                            # ✅ FIX 2: LƯU CẢ CÂU HỎI VÀ TRẢ LỜI
+                            # LƯU CẢ CÂU HỎI VÀ TRẢ LỜI
                             full_content = f"""
                             👤 USER: {prompt}
 
@@ -374,7 +394,7 @@ def run():
                             st.error("⚠️ AI không phản hồi. Vui lòng thử lại.")
         
         # ========================================
-        # MODE 2: MULTI-AGENT (AI vs AI)
+        # MODE 2: MULTI-AGENT (AI vs AI) - ĐÃ SỬA THEO YÊU CẦU
         # ========================================
         else:
             st.info("💡 Chọn 2-3 nhân vật để họ tự tranh luận.")
@@ -418,96 +438,103 @@ def run():
                 else:
                     st.chat_message("assistant").write(content)
             
-            # ✅ FIX 3: LOGIC CHẠY VÒNG LẶP
+            # === PHẦN LOGIC ĐƯỢC SỬA ===
             if start_btn and topic and len(participants) >= 2:
-                # Reset chat history
                 st.session_state.weaver_chat = []
                 
-                # Tin nhắn mở đầu
                 start_msg = f"📢 **CHỦ TỌA:** Khai mạc tranh luận về: *'{topic}'*"
-                st.session_state.weaver_chat.append({
-                    "role": "system", 
-                    "content": start_msg
-                })
+                st.session_state.weaver_chat.append({"role": "system", "content": start_msg})
                 st.info(start_msg)
                 
-                # Biến lưu toàn bộ transcript
                 full_transcript = [start_msg]
                 
-                with st.status("🔥 Cuộc chiến đang diễn ra (3 vòng)...") as status:
-                    for round_num in range(1, 4):
-                        status.update(label=f"🔄 Vòng {round_num}/3 đang diễn ra...")
-                        
-                        for i, p_name in enumerate(participants):
-                            # Lấy ngữ cảnh
-                            if len(st.session_state.weaver_chat) > 1:
-                                recent_context = st.session_state.weaver_chat[-3:]
-                                context_str = "\n".join([
-                                    f"- {m['content']}" 
-                                    for m in recent_context 
-                                    if m['role'] != 'system'
-                                ])
-                            else:
-                                context_str = topic
-                            
-                            # Xây dựng prompt
-                            if round_num == 1:
-                                p_prompt = f"""
-                                CHỦ ĐỀ TRANH LUẬN: {topic}
-
-                                NHIỆM VỤ (Vòng 1 - Khai mạc): 
-                                Bạn là {p_name}. Hãy đưa ra quan điểm mở đầu của mình về chủ đề này.
-                                Nêu rõ lập trường và 2-3 lý lẽ chính (dưới 100 từ).
-                                """
-                            else:
-                                p_prompt = f"""
-                                CHỦ ĐỀ: {topic}
-
-                                TÌNH HUỐNG HIỆN TẠI:
-                                {context_str}
-
-                                NHIỆM VỤ (Vòng {round_num} - Phản biện):
-                                Bạn là {p_name}. Hãy:
-                                1. Chỉ ra điểm yếu trong lập luận của đối thủ
-                                2. Củng cố quan điểm của mình
-                                3. Đưa ra thêm 1 ví dụ minh họa
-                                (Dưới 100 từ, súc tích)
-                                """
-                            
-                            # Gọi AI
-                            try:
-                                res = ai.generate(
-                                    p_prompt, 
-                                    model_type="flash", 
-                                    system_instruction=DEBATE_PERSONAS[p_name]
-                                )
-                                
-                                if res:
-                                    # Format nội dung
-                                    content_fmt = f"**{p_name}:** {res}"
-                                    
-                                    # Lưu vào session
-                                    st.session_state.weaver_chat.append({
-                                        "role": "assistant", 
-                                        "content": content_fmt
-                                    })
-                                    
-                                    # Thêm vào transcript
-                                    full_transcript.append(content_fmt)
-                                    
-                                    # Hiển thị
-                                    with st.chat_message("assistant"):
-                                        st.write(content_fmt)
-                                    
-                                    # Nghỉ để tránh rate limit
-                                    time.sleep(6)
-                                
-                            except Exception as e:
-                                st.error(f"⚠️ Lỗi khi gọi AI cho {p_name}: {str(e)}")
-                    
-                    status.update(label="✅ Tranh luận kết thúc!", state="complete")
+                # ✅ THÊM: Timeout toàn bộ cuộc tranh luận
+                MAX_DEBATE_TIME = 90  # 90 giây
+                start_time = time.time()
                 
-                # ✅ FIX 4: LƯU LỊCH SỬ HOÀN CHỈNH
+                with st.status("🔥 Cuộc chiến đang diễn ra (tối đa 3 vòng)...") as status:
+                    try:
+                        for round_num in range(1, 4):
+                            # ✅ KIỂM TRA TIMEOUT
+                            if time.time() - start_time > MAX_DEBATE_TIME:
+                                st.warning("⏰ Đã hết thời gian tranh luận (90s). Kết thúc sớm.")
+                                break
+                            
+                            status.update(label=f"🔄 Vòng {round_num}/3 đang diễn ra...")
+                            
+                            for i, p_name in enumerate(participants):
+                                # ✅ KIỂM TRA TIMEOUT CHO TỪNG NGƯỜI
+                                if time.time() - start_time > MAX_DEBATE_TIME:
+                                    break
+                                
+                                # Lấy ngữ cảnh (giữ nguyên logic cũ)
+                                if len(st.session_state.weaver_chat) > 1:
+                                    recent_context = st.session_state.weaver_chat[-3:]
+                                    context_str = "\n".join([
+                                        f"- {m['content']}" 
+                                        for m in recent_context 
+                                        if m['role'] != 'system'
+                                    ])
+                                else:
+                                    context_str = topic
+                                
+                                # Xây dựng prompt (giữ nguyên)
+                                if round_num == 1:
+                                    p_prompt = f"""
+                                    CHỦ ĐỀ TRANH LUẬN: {topic}
+
+                                    NHIỆM VỤ (Vòng 1 - Khai mạc): 
+                                    Bạn là {p_name}. Hãy đưa ra quan điểm mở đầu của mình về chủ đề này.
+                                    Nêu rõ lập trường và 2-3 lý lẽ chính (dưới 100 từ).
+                                    """
+                                else:
+                                    p_prompt = f"""
+                                    CHỦ ĐỀ: {topic}
+
+                                    TÌNH HUỐNG HIỆN TẠI:
+                                    {context_str}
+
+                                    NHIỆM VỤ (Vòng {round_num} - Phản biện):
+                                    Bạn là {p_name}. Hãy:
+                                    1. Chỉ ra điểm yếu trong lập luận của đối thủ
+                                    2. Củng cố quan điểm của mình
+                                    3. Đưa ra thêm 1 ví dụ minh họa
+                                    (Dưới 100 từ, súc tích)
+                                    """
+                                
+                                try:
+                                    # ✅ GIẢM THỜI GIAN CHỜ VÀ DÙNG FLASH
+                                    res = ai.generate(
+                                        p_prompt, 
+                                        model_type="flash",  # ← BẮT BUỘC dùng Flash (Pro quá chậm)
+                                        system_instruction=DEBATE_PERSONAS[p_name]
+                                    )
+                                    
+                                    if res:
+                                        content_fmt = f"**{p_name}:** {res}"
+                                        st.session_state.weaver_chat.append({
+                                            "role": "assistant", 
+                                            "content": content_fmt
+                                        })
+                                        full_transcript.append(content_fmt)
+                                        
+                                        with st.chat_message("assistant"):
+                                            st.write(content_fmt)
+                                        
+                                        # ✅ GIẢM SLEEP: 6s → 2s
+                                        time.sleep(2)
+                                    
+                                except Exception as e:
+                                    st.error(f"⚠️ Lỗi khi gọi AI cho {p_name}: {str(e)}")
+                                    continue  # ← Bỏ qua người này, tiếp tục với người khác
+                        
+                        status.update(label="✅ Tranh luận kết thúc!", state="complete")
+                        
+                    except Exception as e:
+                        st.error(f"❌ Lỗi nghiêm trọng: {e}")
+                        status.update(label="❌ Tranh luận gặp lỗi", state="error")
+                
+                # Lưu lịch sử
                 full_log = "\n\n".join(full_transcript)
                 
                 luu_lich_su(
@@ -518,7 +545,6 @@ def run():
                 
                 st.toast("💾 Đã lưu biên bản cuộc họp vào Nhật Ký!", icon="✅")
                 
-                # Hiển thị tóm tắt cuối
                 with st.expander("📄 Xem Toàn Bộ Biên Bản", expanded=False):
                     st.markdown(full_log)
 
@@ -576,7 +602,7 @@ def run():
                 except Exception as e:
                     st.warning(f"Không vẽ được biểu đồ: {e}")
 
-            # --- PHẦN 2: TƯ DUY BAYES (THE JAYNESIAN ANALYZER) - MỚI ---
+            # --- PHẦN 2: TƯ DUY BAYES (THE JAYNESIAN ANALYZER) ---
             with st.expander("🔮 Phân tích Tư duy theo xác suất Bayes (E.T. Jaynes)", expanded=False):
                 st.info("AI sẽ coi Lịch sử hoạt động của chị là 'Dữ liệu quan sát' (Evidence) để suy luận ra 'Hàm mục tiêu' (Objective Function) và sự dịch chuyển niềm tin của chị.")
                 
