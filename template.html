@@ -7,6 +7,8 @@
     <style>
         /* 主题变量 */
         :root {
+            /* ✅ THÊM: Auto dark mode theo system */
+            color-scheme: light dark;
             --primary-color: #1E90FF;
             --text-color: #0E1117;
             --bg-color: #ffffff;
@@ -14,8 +16,17 @@
             --block-border: #e6e6e6;
         }
 
-        /* 深色主题 */
+        /* ✅ THÊM: Cấu hình màu nền Dark Mode đồng bộ Streamlit */
         @media (prefers-color-scheme: dark) {
+            body {
+                background: #0E1117;  /* Màu nền tối chuẩn Streamlit */
+            }
+            
+            .translation-block {
+                background: #262730;
+                border-color: #3d3d46;
+            }
+            
             :root {
                 --text-color: #ffffff;
                 --bg-color: #1E1E1E;
