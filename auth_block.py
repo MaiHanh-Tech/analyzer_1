@@ -42,7 +42,8 @@ class AuthBlock:
         
         # Giới hạn 5 lần thử trong 15 phút
         if len(attempts) >= 5:
-            return False, (attempts[-1] + timedelta(minutes=15) - now).seconds
+            wait_seconds = int((attempts[-1] + timedelta(minutes=15) - now).total_seconds())
+            return False, wait_seconds
         
         return True, 0
 
@@ -86,4 +87,34 @@ class AuthBlock:
         st.session_state.is_admin = admin
         st.session_state.is_vip = vip
 
-    
+    # ✅ THÊM 2 HÀM NÀY (CHỊ ĐANG THIẾU)
+    def check_quota(self):
+        """Kiểm tra user còn quota không"""
+        # VIP user không bị giới hạn
+        if st.session_state.get('is_vip', False): 
+            return True
+        
+        u = st.session_state.get('current_user')
+        if not u: 
+            return False
+        
+        today = datetime.now().strftime("%Y-%m-%d")
+        current = st.session_state.usage_tracking.get(u, {}).get(today, 0)
+        
+        return current < self.default_limit
+
+    def track(self, count):
+        """Ghi nhận usage của user"""
+        # VIP user không cần track
+        if st.session_state.get('is_vip', False): 
+            return
+        
+        u = st.session_state.get('current_user')
+        if u:
+            today = datetime.now().strftime("%Y-%m-%d")
+            
+            if u not in st.session_state.usage_tracking: 
+                st.session_state.usage_tracking[u] = {}
+            
+            cur = st.session_state.usage_tracking[u].get(today, 0)
+            st.session_state.usage_tracking[u][today] = cur + count
