@@ -4,7 +4,7 @@ import json
 import re
 
 # 1. CẤU HÌNH TRANG (Bắt buộc dòng đầu tiên)
-st.set_page_config(page_title="Super AI System", layout="wide", page_icon="🏢")
+st.set_page_config(page_title="Cognitive Weaver", layout="wide", page_icon="🏢")
 
 # 2. KHỐI BẢO MẬT (Import Auth Block)
 try:
