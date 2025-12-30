@@ -2,7 +2,7 @@ import streamlit as st
 import json
 import re
 
-# 1. CẤU HÌNH TRANG (BẮT BUỘC PHẢI Ở DÒNG ĐẦU TIÊN CỦA STREAMLIT)
+# 1. CẤU HÌNH TRANG (BẮT BUỘC PHẢI Ở DÒNG ĐẦU TIÊN)
 st.set_page_config(page_title="Super AI System", layout="wide", page_icon="🏢")
 
 # 2. KHỐI BẢO MẬT (Import Auth Block)
@@ -21,15 +21,15 @@ if not st.session_state.user_logged_in:
     st.title("🔐 Đăng Nhập Hệ Thống")
     c1, c2, c3 = st.columns([1, 2, 1])
     with c2:
-        st.info("Mật khẩu mặc định: 123456") # Gợi ý tạm thời
+        st.info("Mật khẩu mặc định: 123456") 
         pwd = st.text_input("Nhập mật khẩu:", type="password")
         if st.button("Truy cập", use_container_width=True):
-            if auth.login(pwd): # Gọi hàm login từ Auth Block
+            if auth.login(pwd): 
                 st.success("Thành công!")
                 st.rerun()
             else:
                 st.error("Sai mật khẩu!")
-    st.stop() # Dừng lại, không chạy phần dưới nếu chưa login
+    st.stop() 
 
 # 4. GIAO DIỆN CHÍNH (SAU KHI LOGIN)
 with st.sidebar:
@@ -64,7 +64,4 @@ try:
         
 except ImportError as e:
     st.error(f"⚠️ Lỗi: Không tìm thấy file module tương ứng!\nChi tiết: {e}")
-    st.info("👉 Hãy đảm bảo chị đã đổi tên các file cũ thành: module_cfo.py, module_translator.py, module_weaver.py")
-```
-
-Chị bấm **Save** và **Rerun** là vào được ngay ạ! Password là `123456`.
+    st.info
