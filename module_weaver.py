@@ -212,6 +212,7 @@ def tai_lich_su():
         # Lấy 50 dòng mới nhất
         response = supabase.table("history_logs").select("*").order("created_at", desc=True).limit(50).execute()
         raw_data = response.data
+        print("Dữ liệu tải về:", response.data) 
         
         # ✅ CHUYỂN ĐỔI FORMAT (Mapping)
         formatted_data = []
