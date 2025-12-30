@@ -725,44 +725,45 @@ def run():
         else:
             st.info(T("t5_empty"))
 
-# --- 👇 DÁN ĐÈ ĐOẠN NÀY VÀO CUỐI CÙNG TAB 5 (THAY CHO ĐOẠN CŨ) ---
+ # --- 👇 DÁN ĐÈ ĐOẠN NÀY VÀO CUỐI CÙNG TAB 5 (THAY CHO ĐOẠN CŨ) ---
         st.divider()
-        with st.expander("🛠️ CÔNG CỤ CHUYỂN NHÀ (Google Sheet -> Supabase) - V2 Fix Lỗi", expanded=True):
-            st.info("Phiên bản V2: Xử lý định dạng ngày tháng 'YYYY-MM-DD' tốt hơn.")
+        with st.expander("🛠️ CÔNG CỤ CHUYỂN NHÀ (V3 - Fix lỗi Dấu phẩy & Tên bảng)", expanded=True):
+            st.info("Phiên bản V3: Đã xử lý số liệu Việt Nam (0,95 -> 0.95) và Tên bảng chữ Hoa.")
             
             uploaded_csv = st.file_uploader("1. Tải file CSV từ Google Sheet lên đây:", type=["csv"])
             
             if uploaded_csv:
                 # Đọc file CSV
                 df_old = pd.read_csv(uploaded_csv)
-                
-                # ✅ FIX 1: Xóa khoảng trắng thừa trong tên cột (VD: "Time " -> "Time")
+                # Xóa khoảng trắng thừa trong tên cột
                 df_old.columns = df_old.columns.str.strip()
                 
                 st.write(f"Đã tìm thấy {len(df_old)} dòng nhật ký cũ.")
-                st.dataframe(df_old.head(3))
                 
                 if st.button("🚀 BẮT ĐẦU CHUYỂN DỮ LIỆU"):
                     progress_bar = st.progress(0)
                     success_count = 0
                     error_count = 0
-                    errors_log = [] # Lưu chi tiết lỗi để soi
+                    errors_log = [] 
                     
                     for idx, row in df_old.iterrows():
                         try:
-                            # ✅ FIX 2: Xử lý ngày tháng cực mạnh
+                            # 1. XỬ LÝ NGÀY THÁNG
                             raw_time = str(row.get('Time', '')).strip()
-                            clean_time = datetime.now().isoformat() # Mặc định lấy giờ hiện tại nếu lỗi
-                            
+                            clean_time = datetime.now().isoformat()
                             if raw_time and raw_time.lower() != 'nan':
                                 try:
-                                    # Ép kiểu về datetime object
-                                    dt_obj = pd.to_datetime(raw_time)
-                                    # Chuyển về string chuẩn mà SQL nào cũng hiểu
-                                    clean_time = dt_obj.strftime('%Y-%m-%d %H:%M:%S')
-                                except:
-                                    # Nếu vẫn lỗi, thử format cụ thể của chị
-                                    pass
+                                    clean_time = pd.to_datetime(raw_time).strftime('%Y-%m-%d %H:%M:%S')
+                                except: pass
+
+                            # 2. XỬ LÝ SỐ LIỆU (FIX LỖI 0,95)
+                            raw_score = str(row.get('SentimentScore', '0'))
+                            # 👉 Thay dấu phẩy thành dấu chấm ngay lập tức
+                            clean_score = raw_score.replace(',', '.')
+                            try:
+                                final_score = float(clean_score)
+                            except:
+                                final_score = 0.0
 
                             data = {
                                 "created_at": clean_time,
@@ -770,19 +771,23 @@ def run():
                                 "title": str(row.get('Title', 'No Title')),
                                 "content": str(row.get('Content', '')),
                                 "user_name": str(row.get('User', 'Imported')),
-                                "sentiment_score": float(row.get('SentimentScore', 0.0) if pd.notnull(row.get('SentimentScore')) else 0.0),
+                                "sentiment_score": final_score, # ✅ Đã sạch
                                 "sentiment_label": str(row.get('SentimentLabel', 'Neutral'))
                             }
                             
-                            # Gửi lên Supabase
-                            supabase.table("history_logs").insert(data).execute()
+                            # 3. GỬI LÊN SUPABASE (Dùng History_Logs chữ Hoa như lỗi gợi ý)
+                            try:
+                                supabase.table("History_Logs").insert(data).execute()
+                            except:
+                                # Nếu History_Logs lỗi thì thử lại history_logs (phòng hờ)
+                                supabase.table("history_logs").insert(data).execute()
+                                
                             success_count += 1
                             
                         except Exception as e:
                             error_count += 1
                             errors_log.append(f"Dòng {idx}: {str(e)}")
                         
-                        # Cập nhật thanh tiến trình
                         progress_bar.progress((idx + 1) / len(df_old))
                     
                     st.success(f"✅ Đã chuyển thành công: {success_count} dòng.")
