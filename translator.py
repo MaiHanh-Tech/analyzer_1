@@ -7,6 +7,7 @@ import jieba
 from pypinyin import pinyin, Style
 from pydantic import BaseModel, Field
 from typing import List
+from collections import OrderedDict
 
 class WordDefinition(BaseModel):
     word: str
@@ -46,7 +47,11 @@ class Translator:
                 HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
                 HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE
             }
-            self.cache = {}
+            
+            # ✅ DÙNG OrderedDict VỚI GIỚI HẠN
+            self.cache = OrderedDict()
+            self.MAX_CACHE_SIZE = 100  # Chỉ lưu 100 bản dịch gần nhất
+            
             self.initialized = True
 
     def _generate(self, model_name, prompt, structured_output=None):
@@ -78,10 +83,21 @@ class Translator:
         
         return "[System Busy: Quá tải, vui lòng thử lại sau vài giây]"
 
+    # ✅ THÊM HÀM QUẢN LÝ CACHE
+    def _add_to_cache(self, key, value):
+        """Thêm vào cache với giới hạn kích thước"""
+        if len(self.cache) >= self.MAX_CACHE_SIZE:
+            # Xóa item cũ nhất (FIFO)
+            self.cache.popitem(last=False)
+        self.cache[key] = value
+
     def translate_text(self, text, source, target, prompt_template=None):
         if not text.strip(): return ""
-        cache_key = f"{text}|{source}|{target}"
-        if cache_key in self.cache: return self.cache[cache_key]
+        
+        # ✅ SỬA LOGIC CACHE KEY (Cắt ngắn để tiết kiệm bộ nhớ key)
+        cache_key = f"{text[:200]}|{source}|{target}"
+        if cache_key in self.cache: 
+            return self.cache[cache_key]
 
         full_prompt = f"{prompt_template}\n\nNguồn: {source}\nĐích: {target}\nVăn bản: {text}"
         
@@ -93,7 +109,9 @@ class Translator:
             res = self._generate("gemini-2.5-flash", full_prompt)
 
         if "API Error" not in res and "System Busy" not in res:
-            self.cache[cache_key] = res.strip()
+            # ✅ SỬA CÁCH LƯU CACHE
+            self._add_to_cache(cache_key, res.strip())
+            
         return res.strip()
 
     def process_word_by_word(self, text, source, target):
