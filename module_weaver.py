@@ -270,33 +270,67 @@ def run():
         if btn_run and uploaded_files:
             vec = load_models()
             db, df = None, None
-            has_db = False
+            has_db_excel = False  # ← Đổi tên biến để tránh conflict với biến global
+            
             if file_excel:
                 try:
                     df = pd.read_excel(file_excel).dropna(subset=["Tên sách"])
                     db = vec.encode([f"{r['Tên sách']} {str(r.get('CẢM NHẬN',''))}" for _, r in df.iterrows()])
-                    has_db = True
+                    has_db_excel = True
                     st.success(T("t1_connect_ok").format(n=len(df)))
-                except: st.error("Error Reading Excel.")
+                except Exception as e:
+                    st.error(f"❌ Lỗi đọc Excel: {e}")
 
             for f in uploaded_files:
                 text = doc_file(f)
+                if not text:
+                    st.warning(f"⚠️ Không đọc được file {f.name}")
+                    continue
+                
                 link = ""
-                if has_db:
-                    q = vec.encode([text[:2000]])
-                    sc = cosine_similarity(q, db)[0]
-                    idx = np.argsort(sc)[::-1][:3]
-                    for i in idx:
-                        if sc[i] > 0.35: link += f"- {df.iloc[i]['Tên sách']} ({sc[i]*100:.0f}%)\n"
+                if has_db_excel and db is not None:
+                    try:
+                        q = vec.encode([text[:2000]])
+                        sc = cosine_similarity(q, db)[0]
+                        idx = np.argsort(sc)[::-1][:3]
+                        for i in idx:
+                            if sc[i] > 0.35: 
+                                link += f"- {df.iloc[i]['Tên sách']} ({sc[i]*100:.0f}%)\n"
+                    except Exception as e:
+                        st.warning(f"Không thể tính similarity: {e}")
 
                 with st.spinner(T("t1_analyzing").format(name=f.name)):
-                    prompt = f"Analyze '{f.name}'. User Language: {st.session_state.lang}. Related: {link}. Content: {text[:20000]}"
-                    # Sử dụng hàm an toàn
-                    res = run_gemini_safe(model.generate_content, prompt)
-                    if res:
-                        st.markdown(f"### 📄 {f.name}"); st.markdown(res.text); st.markdown("---")
-                        luu_lich_su_vinh_vien("Phân Tích Sách", f.name, res.text)
-
+                    # ✅ Lấy ngôn ngữ user đúng cách
+                    user_lang = st.session_state.get('weaver_lang', 'vi')
+                    lang_map = {'vi': 'Vietnamese', 'en': 'English', 'zh': 'Chinese'}
+                    lang_name = lang_map.get(user_lang, 'Vietnamese')
+                    
+                    # ✅ Xây dựng prompt với ngôn ngữ
+                    full_prompt = f"""
+                    Phân tích tài liệu '{f.name}'.
+                    Ngôn ngữ trả lời: {lang_name}
+                    
+                    Sách liên quan (nếu có):
+                    {link if link else "Không có"}
+                    
+                    Nội dung tài liệu:
+                    {text[:30000]}
+                    """
+                    
+                    # ✅ Gọi AI Core (dùng analyze_static có cache)
+                    res = ai.analyze_static(full_prompt, BOOK_ANALYSIS_PROMPT)
+                    
+                    if res and "Lỗi" not in res:
+                        st.markdown(f"### 📄 {f.name}")
+                        st.markdown(res)
+                        st.markdown("---")
+                        
+                        # ✅ Lưu lịch sử (rút gọn content)
+                        luu_lich_su("Phân Tích Sách", f.name, res[:500])
+                    else:
+                        st.error(f"❌ Không thể phân tích file {f.name}: {res}")
+        
+    
         # Graph
         if file_excel:
             try:
