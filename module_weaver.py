@@ -258,7 +258,6 @@ def run():
     
     tab1, tab2, tab3, tab4, tab5 = st.tabs([T("tab1"), T("tab2"), T("tab3"), T("tab4"), T("tab5")])
 
-    # === TAB 1: RAG & GRAPH ===
     # TAB 1: RAG
     with tab1:
         st.header(T("t1_header"))
@@ -269,60 +268,64 @@ def run():
             with c3: st.write(""); st.write(""); btn_run = st.button(T("t1_btn"), type="primary", use_container_width=True)
 
         if btn_run and uploaded_files:
-            total_files = len(uploaded_files)
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            
             vec = load_models()
             db, df = None, None
-            has_db_rag = False
-            
+            has_db = False
             if file_excel:
                 try:
                     df = pd.read_excel(file_excel).dropna(subset=["Tên sách"])
                     db = vec.encode([f"{r['Tên sách']} {str(r.get('CẢM NHẬN',''))}" for _, r in df.iterrows()])
-                    has_db_rag = True
+                    has_db = True
                     st.success(T("t1_connect_ok").format(n=len(df)))
-                except: st.error("Lỗi đọc Excel.")
+                except: st.error("Error Reading Excel.")
 
-            for file_idx, f in enumerate(uploaded_files):
-                status_text.text(f"Đang xử lý file {file_idx+1}/{total_files}: {f.name}")
-                progress_bar.progress((file_idx) / total_files)
-                
+            for f in uploaded_files:
                 text = doc_file(f)
                 link = ""
-                if has_db_rag and vec:
+                if has_db:
                     q = vec.encode([text[:2000]])
                     sc = cosine_similarity(q, db)[0]
-                    idx_sim = np.argsort(sc)[::-1][:3]
-                    for i in idx_sim:
+                    idx = np.argsort(sc)[::-1][:3]
+                    for i in idx:
                         if sc[i] > 0.35: link += f"- {df.iloc[i]['Tên sách']} ({sc[i]*100:.0f}%)\n"
 
                 with st.spinner(T("t1_analyzing").format(name=f.name)):
-                    prompt = f"Phân tích tài liệu '{f.name}'. Liên quan: {link}\nNội dung: {text[:30000]}"
-                    res = ai.analyze_static(prompt, BOOK_ANALYSIS_PROMPT)
-                    
-                    st.markdown(f"### 📄 {f.name}")
-                    st.markdown(res)
-                    st.markdown("---")
-                    luu_lich_su("Phân Tích Sách", f.name, res[:200])
-                
-                progress_bar.progress((file_idx+1) / total_files)
-            status_text.text("✅ Hoàn thành!")
+                    prompt = f"Analyze '{f.name}'. User Language: {st.session_state.lang}. Related: {link}. Content: {text[:20000]}"
+                    # Sử dụng hàm an toàn
+                    res = run_gemini_safe(model.generate_content, prompt)
+                    if res:
+                        st.markdown(f"### 📄 {f.name}"); st.markdown(res.text); st.markdown("---")
+                        luu_lich_su_vinh_vien("Phân Tích Sách", f.name, res.text)
 
+        # Graph
         if file_excel:
             try:
+                if "df_viz" not in st.session_state: st.session_state.df_viz = pd.read_excel(file_excel).dropna(subset=["Tên sách"])
+                df_v = st.session_state.df_viz
+                
                 with st.expander(T("t1_graph_title"), expanded=False):
                     vec = load_models()
-                    if "book_embs" not in st.session_state: st.session_state.book_embs = vec.encode(df["Tên sách"].tolist())
+                    if "book_embs" not in st.session_state:
+                        with st.spinner("Đang số hóa sách..."):
+                            st.session_state.book_embs = vec.encode(df_v["Tên sách"].tolist())
+                    
                     embs = st.session_state.book_embs
                     sim = cosine_similarity(embs)
-                    nodes, edges = []; max_nodes = st.slider("Max Nodes:", 5, len(df), min(50, len(df))); threshold = st.slider("Threshold:", 0.0, 1.0, 0.45)
+                    nodes, edges = [], []
+                    
+                    # Graph Config
+                    total_books = len(df_v)
+                    c_slider1, c_slider2 = st.columns(2)
+                    with c_slider1: max_nodes = st.slider("Số lượng sách hiển thị:", 5, total_books, min(50, total_books))
+                    with c_slider2: threshold = st.slider("Độ tương đồng nối dây:", 0.0, 1.0, 0.45)
+
                     for i in range(max_nodes):
-                        nodes.append(Node(id=str(i), label=df.iloc[i]["Tên sách"], size=20, color="#FFD166"))
+                        nodes.append(Node(id=str(i), label=df_v.iloc[i]["Tên sách"], size=20, color="#FFD166"))
                         for j in range(i+1, max_nodes):
                             if sim[i,j]>threshold: edges.append(Edge(source=str(i), target=str(j), color="#118AB2"))
-                    agraph(nodes, edges, Config(width=900, height=600, directed=False, physics=True, collapsible=False))
+                    
+                    config = Config(width=900, height=600, directed=False, physics=True, collapsible=False)
+                    agraph(nodes, edges, config)
             except: pass
 
     # === TAB 2: DỊCH GIẢ ===
