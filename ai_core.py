@@ -40,7 +40,7 @@ class AI_Core:
         # ✅ DANH SÁCH MODEL MỚI NHẤT (Cập nhật 2025)
         valid_names = {
             "flash": "gemini-2.5-flash",         # Nhanh, rẻ
-            "pro": "gemini-3.0-pro-preview",             # Thông minh nhất (Dùng cho tranh biện)
+            "pro": "gemini-2.5-pro",             # Thông minh nhất (Dùng cho tranh biện)
             "exp": "gemini-2.5-flash-latest"        # Bản thử nghiệm
         }
         
@@ -69,7 +69,7 @@ class AI_Core:
         if model_type == "pro":
             # Với task khó (Tranh biện): Ưu tiên 3.0 Pro
             plan = [
-                ("pro", "Gemini 3.0 Pro Preview", 6), 
+                ("pro", "Gemini 2.5 pro", 6), 
                 ("flash", "Gemini 2.5 Flash", 3), 
                 ("exp", "Gemini Flash Latest", 3)
             ]
@@ -78,7 +78,7 @@ class AI_Core:
             plan = [
                 ("flash", "Gemini 2.5 Flash", 2), 
                 ("exp", "Gemini Flash Latest", 2),
-                ("pro", "Gemini 3.0 Pro Preview", 6)
+                ("pro", "Gemini 2.5 Pro", 6)
             ]
 
         last_errors = []
