@@ -145,7 +145,6 @@ def T(key):
 # --- CÁC HÀM PHỤ TRỢ ---
 @st.cache_resource
 def load_models():
-    """Chỉ load khi thực sự cần"""
     try:
         model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2", device='cpu')
         model.max_seq_length = 128
@@ -169,6 +168,7 @@ def doc_file(uploaded_file):
         elif ext == "docx":
             doc = Document(uploaded_file)
             return "\n".join([p.text for p in doc.paragraphs])
+        # ✅ ĐÃ CÓ CODE XỬ LÝ MD/TXT Ở ĐÂY
         elif ext in ["txt", "md", "html"]:
             return str(uploaded_file.read(), "utf-8")
     except: return ""
@@ -263,7 +263,10 @@ def run():
         st.subheader(T("t1_header"))
         c1, c2, c3 = st.columns([1, 1, 1])
         with c1: file_excel = st.file_uploader(T("t1_up_excel"), type="xlsx", key="w_t1_ex")
-        with c2: uploaded_files = st.file_uploader(T("t1_up_doc"), type=["pdf", "docx", "txt"], accept_multiple_files=True, key="w_t1_doc")
+        
+        # ✅ FIX: THÊM 'md', 'html' VÀO DANH SÁCH CHO PHÉP UPLOAD
+        with c2: uploaded_files = st.file_uploader(T("t1_up_doc"), type=["pdf", "docx", "txt", "md", "html"], accept_multiple_files=True, key="w_t1_doc")
+        
         with c3: 
             st.write(""); st.write("")
             btn_run = st.button(T("t1_btn"), type="primary", use_container_width=True)
