@@ -39,9 +39,6 @@ class AuthBlock:
             return True
 
         # CÁCH 2: Check Database Supabase (Chỉ check user = admin vì đây là form login tổng)
-        # Thực tế chị có thể mở rộng để user nhập cả username, nhưng ở app này chị đang chỉ nhập password.
-        # Nên ta quy ước: Nếu nhập pass khớp với bất kỳ user nào trong DB -> Login vào user đó.
-        
         if self.db_connected:
             try:
                 # Lấy tất cả user đang active
